@@ -1,7 +1,7 @@
 # Estado Atual do Projeto — FinançasSimples
 
-* **Última atualização:** 2026-09-19 (Conclusão da Fase 6 — Módulo de Contas e Carteiras)
-* **Fase atual:** Fase 6 concluída — Módulo de Contas e Carteiras
+* **Última atualização:** 2026-09-29 (Refinamento do dimensionamento visual da logomarca nas telas de login e sidebar)
+* **Fase atual:** Fase 6 concluída — Módulo de Contas e Carteiras (com refinamento visual da logomarca)
 * **Próximo passo recomendado:** Iniciar a Fase 7 (Módulo de Categorias e Orçamentos)
 
 ---
@@ -75,6 +75,7 @@
 - [x] Disponibilizar scripts locais de React, ReactDOM e Babel Standalone em `app/static/js/vendor/` sem necessidade de runtime ou build via Node.js/npm;
 - [x] Implementar cliente HTTP padronizado (`app/static/js/api.js`) com leitura da meta tag e envio transparente do cabeçalho `X-CSRFToken` em requisições de mutação (`POST`, `PUT`, `PATCH`, `DELETE`);
 - [x] Construir a aplicação React inicial (`app/static/js/app.js`) com componentes completos de Login, Cadastro, Recuperação de Senha, Redefinição de Senha, Shell Autenticado inicial e alternador de tema com sincronização dinâmica das logotipos (`logo_tema_escuro.png` e `logo_tema_claro.png`);
+- [x] Calibrar dimensionamento e respiro da logomarca: 25% a 30% da viewheight (`26vh`) nas telas de autenticação e proporcional com respiro interno e centralização na barra lateral (`.sidebar`) de 260px;
 - [x] Criar suíte de testes automatizados com 100% de aprovação (`tests/test_fase5_interface.py`).
 
 

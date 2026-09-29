@@ -1,32 +1,44 @@
 # Obsidian — High-Contrast Dark
 
-## North Star: "Precision in Darkness"
-Developer-grade dark UI. Near-black surfaces, high-contrast text, and precise accent colors. Clean, fast-feeling, and functional.
+## Guia Norteador (North Star): "Precisão na Escuridão"
+Interface escura de nível profissional (developer-grade). Superfícies quase pretas (near-black), tipografia de alto contraste e cores de destaque cirúrgicas e precisas. Visual limpo, ágil e estritamente funcional.
 
-## Colors
-- **Primary (`#a78bfa`):** Soft violet — interactive elements, links, focus rings.
-- **Background (`#09090b`):** True near-black.
-- **Tertiary (`#34d399`):** Emerald green — success states, positive indicators, code highlights.
-- **Surface scale:** Zinc-based grays (`#0c0c0f` → `#27272a`). Very subtle increments.
-- Red (`#ef4444`) for errors only. No decorative color use.
+## Cores
+- **Primária (`#a78bfa`):** Violeta suave — elementos interativos, links, estados ativos e anéis de foco.
+- **Fundo (`#09090b`):** Fundo base quase preto absoluto (*true near-black*).
+- **Terciária (`#34d399`):** Verde esmeralda — estados de sucesso, receitas, saldos positivos e destaques contextuais.
+- **Escala de Superfície:** Tons de cinza baseados em zinc (`#0c0c0f` → `#27272a`), com gradações muito sutis.
+- **Erro (`#ef4444`):** Vermelho reservado estritamente para erros, alertas críticos e despesas/atrasos. Sem uso decorativo de cores.
 
-## Typography
-- **All fonts:** Geist — modern, clean, developer-friendly.
-- Tight letter-spacing on headings (-0.02em). Standard on body.
-- `#fafafa` for primary text, `#a1a1aa` for secondary. High contrast always.
+## Tipografia
+- **Família de Fontes:** Geist (Geist Sans e Geist Mono) — moderna, nítida e voltada para produtividade.
+- Espaçamento entre letras (*letter-spacing*) reduzido nos títulos (-0.02em) para máxima sobriedade. Espaçamento padrão no corpo do texto.
+- `#fafafa` para o texto primário e `#a1a1aa` para o texto secundário, assegurando alto contraste e legibilidade constante.
 
-## Elevation
-- Minimal shadows. Use border-based separation: `1px solid #27272a`.
-- Active/hover states: subtle background shifts to next surface tier.
-- Focus rings: `2px solid #a78bfa` with `2px offset`.
+## Elevação e Profundidade
+- Sombras mínimas ou ausentes. Separação visual fundamentada em bordas finas e precisas: `1px solid #27272a`.
+- Estados ativos e ao passar o mouse (*hover*): transições sutis para o nível seguinte da escala de superfície.
+- Anéis de foco acessíveis: `2px solid #a78bfa` com deslocamento de `2px` (*2px offset*).
 
-## Components
-- **Buttons:** Primary = solid violet fill. Secondary = transparent + border. Ghost = text only, visible on hover.
-- **Cards:** `surface_container` background, thin `outline_variant` border, 8px radius.
-- **Inputs:** `surface_container` fill, `outline_variant` border, violet focus ring.
-- **Code blocks:** `surface_container_lowest` background, monospace font.
+## Componentes
+- **Botões:**
+  - Primário: preenchimento violeta sólido com texto escuro de alto contraste.
+  - Secundário: fundo transparente com borda sutil.
+  - Fantasma (*Ghost*): apenas texto, com realce de fundo visível no *hover*.
+- **Cartões (*Cards*):** Fundo em `surface_container`, borda fina em `outline_variant` e raio de arredondamento de 8px (`border-radius: 8px`).
+- **Campos de Entrada (*Inputs*):** Preenchimento em `surface_container`, borda fina e anel de foco em violeta.
+- **Blocos de Código e Números Mono:** Fundo mais profundo (`surface_container_lowest`) e fonte monoespaçada (Geist Mono).
 
-## Rules
-- Never use light backgrounds. Maintain zinc gray consistency.
-- Borders over shadows for separation. Keep the interface flat and precise.
-- Accent colors for function, never decoration.
+## Regras Fundamentais
+- Nunca utilizar fundos claros no tema padrão. Manter consistência rigorosa na escala de cinzas zinc.
+- Priorizar bordas sutis sobre sombras decorativas para separação de planos. A interface deve ser plana, nítida e precisa.
+- Cores de destaque devem possuir significado funcional, nunca meramente decorativo.
+
+## Logotipo e Identidade Visual
+- **Proporção e Arquivos:** Imagens quadradas 1:1 (`logo_tema_escuro.png` para tema escuro e `logo_tema_claro.png` para tema claro).
+- **Telas de Autenticação (Login, Cadastro, Recuperação de Senha):**
+  - Ocupa de **25% a 30% da viewheight** horizontal padrão (`height: 26vh; min-height: 120px; max-width: 100%; object-fit: contain;`).
+  - Posicionamento centralizado com margem inferior harmônica antes do título.
+- **Barra Lateral / Dashboard (Sidebar de 260px):**
+  - Dimensionamento proporcional para encaixar na sidebar com margens de respiro (`max-width: 160px; height: clamp(100px, 16vh, 150px); object-fit: contain;`).
+  - Margem lateral e vertical em relação aos limites da barra lateral (`.sidebar`), preservando a usabilidade e o espaçamento dos links de navegação.

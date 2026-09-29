@@ -42,4 +42,14 @@ Utilize o padrão abaixo para cadastrar novos incidentes:
 - **Solução aplicada:** (1) Criação de `renovar_sessao_mantendo_csrf()` em `app/utils/csrf.py` para preservar o token CSRF durante a regeneração de sessão no login, cadastro e logout; (2) Inclusão do token e do usuário tanto na raiz quanto em `dados` nas respostas de login e cadastro; (3) Implementação de auto-sincronização e auto-retry transparente no `app/static/js/api.js`; (4) Atualização do componente React para extrair o usuário flexivelmente (`res.usuario || res.dados.usuario`); (5) Redirecionamento da rota do Google OAuth para `/login?aviso=google_nao_configurado` com alerta visual informativo caso as chaves não estejam preenchidas no `config/config.py`.
 - **Como evitar no futuro:** Ao regenerar sessões (`session.clear()`), sempre preservar ou emitir e sincronizar tokens CSRF com o cliente, e padronizar o schema de payloads JSON entre frontend e backend.
 
+## 2026-09-29 - Dimensionamento excessivamente reduzido da logomarca nas telas de autenticação e no dashboard
+
+- **Sintoma:** O logotipo do FinançasSimples era renderizado em escala quase imperceptível (~4% a 5% da altura de visualização horizontal na tela de login e 36px na barra lateral do dashboard), prejudicando a identidade visual da aplicação.
+- **Causa:** Regras CSS estáticas com restrições rígidas (`height: 48px; max-width: 240px;` em `.auth-logo` e `height: 36px;` em `.sidebar-logo`) que não aproveitavam o espaço visual da viewport nem a proporção quadrada (1:1) dos assets oficiais.
+- **Solução aplicada:**
+  1. Tela de Login/Autenticação: redefinido `.auth-logo` para `height: 26vh; min-height: 120px; max-width: 100%; object-fit: contain;`, ocupando entre 25% e 30% da viewheight padrão em telas horizontais.
+  2. Barra Lateral / Dashboard: redefinido `.sidebar-logo` para `height: clamp(100px, 16vh, 150px); max-width: 160px; object-fit: contain; margin: 0 auto;`, mantendo a largura fixa da sidebar em 260px com respiro generoso em relação às bordas e ao fim da sidebar, além de adicionar `overflow-y: auto` no menu de navegação.
+  3. Formalização da regra de identidade visual e dimensionamento de logotipos em `docs/DESIGN.md`.
+- **Como evitar no futuro:** Sempre utilizar unidades relativas ao contexto visual (`vh`, `clamp`) para elementos de identidade visual chave e consultar a seção "Logotipo e Identidade Visual" de `docs/DESIGN.md` ao implementar novos fluxos ou telas.
+
 
