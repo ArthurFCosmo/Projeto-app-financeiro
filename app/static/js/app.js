@@ -678,12 +678,9 @@ function formatarMoeda(valor) {
 // Componente: Modal Genérico
 // ==============================================================================
 function Modal({ titulo, onFechar, children }) {
-  // Fechar ao clicar no overlay
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onFechar();
-  };
+  // Modal não fecha ao clicar no overlay de fundo para evitar perda acidental de dados
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
+    <div className="modal-overlay">
       <div className="modal-container" role="dialog" aria-modal="true">
         <div className="modal-header">
           <h3 className="modal-titulo">{titulo}</h3>
@@ -1065,17 +1062,634 @@ function TelaLancamentos() {
   );
 }
 
+// ==============================================================================
+// Componente: Tela de Categorias e Orçamentos (Fase 7)
+// ==============================================================================
 function TelaCategorias() {
+  const [categorias, setCategorias] = React.useState([]);
+  const [abaAtiva, setAbaAtiva] = React.useState('despesa'); // 'despesa' ou 'receita'
+  const [carregando, setCarregando] = React.useState(true);
+  const [erro, setErro] = React.useState('');
+  const [mensagemSucesso, setMensagemSucesso] = React.useState('');
+
+  // Estados do Modal de Criação / Edição
+  const [modalAberto, setModalAberto] = React.useState(false);
+  const [categoriaEmEdicao, setCategoriaEmEdicao] = React.useState(null);
+  const [formNome, setFormNome] = React.useState('');
+  const [formTipo, setFormTipo] = React.useState('despesa');
+  const [formTeto, setFormTeto] = React.useState('');
+  const [salvando, setSalvando] = React.useState(false);
+  const [erroModal, setErroModal] = React.useState('');
+
+  // Estados do Modal de Reatribuição em Lote ao Excluir
+  const [modalReatribuicaoAberto, setModalReatribuicaoAberto] = React.useState(false);
+  const [categoriaParaExcluir, setCategoriaParaExcluir] = React.useState(null);
+  const [infoReatribuicao, setInfoReatribuicao] = React.useState(null);
+  const [novaCategoriaId, setNovaCategoriaId] = React.useState('');
+  const [processandoReatribuicao, setProcessandoReatribuicao] = React.useState(false);
+  const [erroReatribuicao, setErroReatribuicao] = React.useState('');
+
+  const carregarCategorias = async () => {
+    setCarregando(true);
+    setErro('');
+    try {
+      const res = await window.api.get('/api/categorias');
+      if (res && res.sucesso) {
+        setCategorias(res.dados.categorias || []);
+      } else {
+        setErro((res && res.erro) || 'Erro ao carregar categorias.');
+      }
+    } catch (err) {
+      setErro(err.message || 'Erro de comunicação ao carregar categorias.');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  React.useEffect(() => {
+    carregarCategorias();
+  }, []);
+
+  const exibirSucesso = (msg) => {
+    setMensagemSucesso(msg);
+    setTimeout(() => setMensagemSucesso(''), 4000);
+  };
+
+  const formatarMoedaInput = (valorNumerico) => {
+    if (valorNumerico === null || valorNumerico === undefined || isNaN(valorNumerico)) return '';
+    return Number(valorNumerico).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const abrirModalNova = (tipoInicial) => {
+    setCategoriaEmEdicao(null);
+    setFormNome('');
+    setFormTipo(tipoInicial || abaAtiva);
+    setFormTeto('');
+    setErroModal('');
+    setModalAberto(true);
+  };
+
+  const abrirModalEditar = (cat) => {
+    setCategoriaEmEdicao(cat);
+    setFormNome(cat.nome);
+    setFormTipo(cat.tipo);
+    setFormTeto(cat.teto_orcamento !== null ? formatarMoedaInput(cat.teto_orcamento) : '');
+    setErroModal('');
+    setModalAberto(true);
+  };
+
+  const fecharModal = () => {
+    setModalAberto(false);
+    setCategoriaEmEdicao(null);
+    setErroModal('');
+  };
+
+  const fecharModalReatribuicao = () => {
+    setModalReatribuicaoAberto(false);
+    setCategoriaParaExcluir(null);
+    setInfoReatribuicao(null);
+    setNovaCategoriaId('');
+    setErroReatribuicao('');
+  };
+
+  const handleTetoChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (!digits) {
+      setFormTeto('');
+      return;
+    }
+    const centavos = parseInt(digits, 10);
+    const reais = centavos / 100;
+    setFormTeto(formatarMoedaInput(reais));
+  };
+
+  const handleStepTeto = (deltaReais) => {
+    let valorAtual = 0;
+    if (formTeto) {
+      const limpo = formTeto.replace(/\./g, '').replace(',', '.');
+      valorAtual = parseFloat(limpo) || 0;
+    }
+    const novoValor = Math.max(0, valorAtual + deltaReais);
+    setFormTeto(formatarMoedaInput(novoValor));
+  };
+
+  const handleSalvar = async (e) => {
+    e.preventDefault();
+    setErroModal('');
+    const nome = formNome.trim();
+    if (!nome) {
+      setErroModal('O nome da categoria é obrigatório.');
+      return;
+    }
+
+    let tetoNum = null;
+    if (formTipo === 'despesa' && formTeto) {
+      const limpo = formTeto.replace(/\./g, '').replace(',', '.');
+      tetoNum = parseFloat(limpo);
+      if (isNaN(tetoNum) || tetoNum < 0) {
+        setErroModal('O teto orçamentário deve ser um número válido e maior ou igual a zero.');
+        return;
+      }
+    }
+
+    setSalvando(true);
+    try {
+      if (categoriaEmEdicao) {
+        const payload = { nome };
+        if (formTipo === 'despesa') {
+          payload.teto_orcamento = tetoNum;
+        }
+        const res = await window.api.put(`/api/categorias/${categoriaEmEdicao.id}`, payload);
+        if (res && res.sucesso) {
+          exibirSucesso(res.mensagem || 'Categoria atualizada com sucesso.');
+          fecharModal();
+          carregarCategorias();
+        } else {
+          setErroModal((res && res.erro) || 'Erro ao salvar alterações.');
+        }
+      } else {
+        const payload = {
+          nome,
+          tipo: formTipo,
+          teto_orcamento: tetoNum,
+        };
+        const res = await window.api.post('/api/categorias', payload);
+        if (res && res.sucesso) {
+          exibirSucesso(res.mensagem || 'Categoria criada com sucesso.');
+          fecharModal();
+          carregarCategorias();
+        } else {
+          setErroModal((res && res.erro) || 'Erro ao criar categoria.');
+        }
+      }
+    } catch (err) {
+      setErroModal(err.message || 'Erro inesperado ao salvar.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleArquivar = async (cat) => {
+    if (!window.confirm(`Deseja arquivar a categoria "${cat.nome}"? Ela não aparecerá para novas seleções, mas o histórico existente continuará intacto.`)) return;
+    try {
+      const res = await window.api.patch(`/api/categorias/${cat.id}/arquivar`);
+      if (res && res.sucesso) {
+        exibirSucesso(res.mensagem || 'Categoria arquivada com sucesso.');
+        carregarCategorias();
+      } else {
+        setErro((res && res.erro) || 'Erro ao arquivar categoria.');
+      }
+    } catch (err) {
+      setErro(err.message || 'Erro de comunicação ao arquivar.');
+    }
+  };
+
+  const handleReativar = async (cat) => {
+    try {
+      const res = await window.api.patch(`/api/categorias/${cat.id}/reativar`);
+      if (res && res.sucesso) {
+        exibirSucesso(res.mensagem || 'Categoria reativada com sucesso.');
+        carregarCategorias();
+      } else {
+        setErro((res && res.erro) || 'Erro ao reativar categoria.');
+      }
+    } catch (err) {
+      setErro(err.message || 'Erro de comunicação ao reativar.');
+    }
+  };
+
+  const handleExcluir = async (cat) => {
+    if (!window.confirm(`Tem certeza que deseja excluir a categoria "${cat.nome}"?`)) return;
+
+    try {
+      const res = await window.api.delete(`/api/categorias/${cat.id}`);
+      if (res && res.sucesso) {
+        exibirSucesso(res.mensagem || 'Categoria excluída com sucesso.');
+        carregarCategorias();
+      } else if (res && res.requer_reatribuicao) {
+        setCategoriaParaExcluir(cat);
+        setInfoReatribuicao(res);
+        const candidatas = categorias.filter(c => c.id !== cat.id && c.tipo === cat.tipo && c.status === 'ativo');
+        setNovaCategoriaId(candidatas.length > 0 ? String(candidatas[0].id) : '');
+        setErroReatribuicao('');
+        setModalReatribuicaoAberto(true);
+      } else {
+        setErro((res && res.erro) || 'Não foi possível excluir a categoria.');
+      }
+    } catch (err) {
+      setErro(err.message || 'Erro de comunicação ao excluir.');
+    }
+  };
+
+  const handleConfirmarReatribuicao = async (e) => {
+    e.preventDefault();
+    if (!novaCategoriaId) {
+      setErroReatribuicao('Selecione uma categoria de destino válida.');
+      return;
+    }
+
+    setProcessandoReatribuicao(true);
+    setErroReatribuicao('');
+    try {
+      const res = await window.api.post(`/api/categorias/${categoriaParaExcluir.id}/reatribuir-excluir`, {
+        nova_categoria_id: parseInt(novaCategoriaId, 10),
+      });
+
+      if (res && res.sucesso) {
+        exibirSucesso(res.mensagem || 'Histórico transferido e categoria excluída com sucesso.');
+        fecharModalReatribuicao();
+        carregarCategorias();
+      } else {
+        setErroReatribuicao((res && res.erro) || 'Erro na reatribuição.');
+      }
+    } catch (err) {
+      setErroReatribuicao(err.message || 'Erro de comunicação durante a reatribuição.');
+    } finally {
+      setProcessandoReatribuicao(false);
+    }
+  };
+
+  // Filtra as categorias conforme a aba ativa
+  const categoriasExibidas = categorias.filter(c => c.tipo === abaAtiva);
+  const ativas = categoriasExibidas.filter(c => c.status === 'ativo');
+  const arquivadas = categoriasExibidas.filter(c => c.status === 'arquivado');
+
+  // Contagens para badges das abas
+  const totalDespesas = categorias.filter(c => c.tipo === 'despesa').length;
+  const totalReceitas = categorias.filter(c => c.tipo === 'receita').length;
+
+  // Categorias válidas de destino para reatribuição
+  const categoriasDestinoValidas = categoriaParaExcluir
+    ? categorias.filter(c => c.id !== categoriaParaExcluir.id && c.tipo === categoriaParaExcluir.tipo && c.status === 'ativo')
+    : [];
+
   return (
     <div className="module-container">
+      {/* Cabeçalho do módulo */}
       <div className="module-header">
-        <div><h2 className="module-title">Categorias &amp; Tetos</h2></div>
+        <div>
+          <h2 className="module-title">Categorias &amp; Tetos de Orçamento</h2>
+          <p className="module-subtitle">Classifique suas receitas e despesas e monitore limites de gastos mensais.</p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => abrirModalNova(abaAtiva)}
+        >
+          + Nova Categoria
+        </button>
       </div>
-      <div className="empty-state">
-        <div className="empty-icon">🏷️</div>
-        <p className="empty-title">Módulo em construção</p>
-        <p className="empty-subtitle">Será implementado na Fase 7.</p>
+
+      {/* Alertas */}
+      {mensagemSucesso && <div className="alert alert-success">{mensagemSucesso}</div>}
+      {erro && (
+        <div className="alert alert-error">
+          {erro}
+          <button className="alert-fechar" onClick={() => setErro('')}>✕</button>
+        </div>
+      )}
+
+      {/* Navegação por Abas (Despesas / Receitas) */}
+      <div className="tabs-nav">
+        <button
+          type="button"
+          className={`tab-btn ${abaAtiva === 'despesa' ? 'active' : ''}`}
+          onClick={() => setAbaAtiva('despesa')}
+        >
+          <span>📉 Despesas</span>
+          <span className="tab-count">{totalDespesas}</span>
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${abaAtiva === 'receita' ? 'active' : ''}`}
+          onClick={() => setAbaAtiva('receita')}
+        >
+          <span>📈 Receitas</span>
+          <span className="tab-count">{totalReceitas}</span>
+        </button>
       </div>
+
+      {carregando ? (
+        <div className="skeleton-list">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton-card" />)}
+        </div>
+      ) : (
+        <>
+          {/* Seção de Categorias Ativas */}
+          {ativas.length > 0 ? (
+            <div className="section-block">
+              <h3 className="section-title">Categorias Ativas ({ativas.length})</h3>
+              <div className="cards-grid">
+                {ativas.map(cat => {
+                  const temTeto = cat.tipo === 'despesa' && cat.teto_orcamento !== null && cat.teto_orcamento > 0;
+                  const porcentagem = cat.porcentagem_consumo || 0;
+                  const tetoExcedido = cat.teto_excedido || porcentagem > 100;
+
+                  let progressClass = 'progress-safe';
+                  if (tetoExcedido) {
+                    progressClass = 'progress-exceeded';
+                  } else if (porcentagem >= 80) {
+                    progressClass = 'progress-warning';
+                  }
+
+                  return (
+                    <div key={cat.id} className="category-card">
+                      <div>
+                        <div className="category-card-header">
+                          <div className="category-name-group">
+                            <span className="category-icon-coin" title={cat.tipo === 'despesa' ? 'Categoria de Despesa' : 'Categoria de Receita'}>🪙</span>
+                            <span className="category-name" title={cat.nome}>{cat.nome}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                            {tetoExcedido && <span className="badge badge-exceeded">Teto Excedido</span>}
+                            <span className="badge badge-active">Ativa</span>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Orçamento para Despesas */}
+                        {cat.tipo === 'despesa' && (
+                          temTeto ? (
+                            <div className="budget-block">
+                              <div className="budget-header">
+                                <span className="budget-amounts">
+                                  <strong>{formatarMoeda(cat.consumo_mes)}</strong>
+                                  <span className="budget-meta"> de {formatarMoeda(cat.teto_orcamento)}</span>
+                                </span>
+                                <span
+                                  className="budget-percent"
+                                  style={{ color: tetoExcedido ? 'var(--error)' : 'var(--text-primary)' }}
+                                >
+                                  {porcentagem}%
+                                </span>
+                              </div>
+                              <div className="progress-bar-bg" title={`${porcentagem}% do orçamento consumido este mês`}>
+                                <div
+                                  className={`progress-bar-fill ${progressClass}`}
+                                  style={{ width: `${Math.min(porcentagem, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="no-budget-meta">Sem teto de gastos definido</div>
+                          )
+                        )}
+                      </div>
+
+                      <div className="account-actions" style={{ marginTop: '0.75rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => abrirModalEditar(cat)}
+                          title="Editar categoria ou teto"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => handleArquivar(cat)}
+                          title="Arquivar categoria"
+                        >
+                          📦 Arquivar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm btn-danger"
+                          onClick={() => handleExcluir(cat)}
+                          title="Excluir categoria"
+                        >
+                          🗑️ Excluir
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">🪙</div>
+              <p className="empty-title">Nenhuma categoria de {abaAtiva} ativa</p>
+              <p className="empty-subtitle">Cadastre uma categoria para organizar suas movimentações.</p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => abrirModalNova(abaAtiva)}
+              >
+                + Criar Primeira Categoria de {abaAtiva === 'despesa' ? 'Despesa' : 'Receita'}
+              </button>
+            </div>
+          )}
+
+          {/* Seção de Categorias Arquivadas */}
+          {arquivadas.length > 0 && (
+            <div className="section-block section-archived">
+              <h3 className="section-title">Categorias Arquivadas ({arquivadas.length})</h3>
+              <div className="cards-grid">
+                {arquivadas.map(cat => (
+                  <div key={cat.id} className="category-card category-card-archived">
+                    <div className="category-card-header">
+                      <div className="category-name-group">
+                        <span className="category-icon-coin" style={{ opacity: 0.6 }} title="Categoria Arquivada">🪙</span>
+                        <span className="category-name" title={cat.nome}>{cat.nome}</span>
+                      </div>
+                      <span className="badge badge-archived">Arquivada</span>
+                    </div>
+
+                    <div className="account-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => handleReativar(cat)}
+                        title="Reativar categoria"
+                      >
+                        ♻️ Reativar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm btn-danger"
+                        onClick={() => handleExcluir(cat)}
+                        title="Excluir permanentemente"
+                      >
+                        🗑️ Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modal de Criação / Edição de Categoria */}
+      {modalAberto && (
+        <Modal
+          titulo={categoriaEmEdicao ? `Editar Categoria: ${categoriaEmEdicao.nome}` : `Nova Categoria de ${formTipo === 'despesa' ? 'Despesa' : 'Receita'}`}
+          onFechar={fecharModal}
+        >
+          <form onSubmit={handleSalvar}>
+            {erroModal && <div className="alert alert-error">{erroModal}</div>}
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="cat-nome">Nome da Categoria</label>
+              <input
+                id="cat-nome"
+                type="text"
+                required
+                maxLength={100}
+                className="form-input"
+                placeholder="Ex: Alimentação, Lazer, Salário..."
+                value={formNome}
+                onChange={(e) => setFormNome(e.target.value)}
+                disabled={salvando}
+                autoFocus
+              />
+            </div>
+
+            {!categoriaEmEdicao && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="cat-tipo">Tipo</label>
+                <select
+                  id="cat-tipo"
+                  className="form-select"
+                  value={formTipo}
+                  onChange={(e) => setFormTipo(e.target.value)}
+                  disabled={salvando}
+                >
+                  <option value="despesa">Despesa (Saída)</option>
+                  <option value="receita">Receita (Entrada)</option>
+                </select>
+              </div>
+            )}
+
+            {formTipo === 'despesa' && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="cat-teto">Teto de Gastos Mensal — Opcional</label>
+                <div className="input-moeda-wrapper">
+                  <span className="input-moeda-prefixo">R$</span>
+                  <input
+                    id="cat-teto"
+                    type="text"
+                    inputMode="numeric"
+                    className="form-input input-moeda-field"
+                    placeholder="0,00"
+                    value={formTeto}
+                    onChange={handleTetoChange}
+                    disabled={salvando}
+                  />
+                  <div className="input-moeda-steppers">
+                    <button
+                      type="button"
+                      className="input-moeda-stepper-btn"
+                      onClick={() => handleStepTeto(1)}
+                      title="Aumentar R$ 1,00"
+                      disabled={salvando}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      className="input-moeda-stepper-btn"
+                      onClick={() => handleStepTeto(-1)}
+                      title="Diminuir R$ 1,00"
+                      disabled={salvando}
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
+                <span className="form-helper">Defina um limite de gastos para receber alertas visuais no painel caso ultrapasse.</span>
+              </div>
+            )}
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={fecharModal} disabled={salvando}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={salvando}>
+                {salvando ? 'Salvando...' : (categoriaEmEdicao ? 'Salvar Alterações' : 'Criar Categoria')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal de Reatribuição em Lote ao Excluir com Histórico */}
+      {modalReatribuicaoAberto && categoriaParaExcluir && (
+        <Modal
+          titulo={`Excluir Categoria: ${categoriaParaExcluir.nome}`}
+          onFechar={fecharModalReatribuicao}
+        >
+          <form onSubmit={handleConfirmarReatribuicao}>
+            {erroReatribuicao && <div className="alert alert-error">{erroReatribuicao}</div>}
+
+            <div className="modal-warning-box">
+              <div className="modal-warning-title">
+                ⚠️ Categoria em uso no histórico
+              </div>
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                A categoria <strong>"{categoriaParaExcluir.nome}"</strong> possui{' '}
+                <strong>{infoReatribuicao?.total_lancamentos || 0} lançamento(s)</strong> e{' '}
+                <strong>{infoReatribuicao?.total_recorrentes || 0} fixo(s)</strong> vinculados.
+              </p>
+              <p style={{ margin: 0 }}>
+                Para evitar a quebra do seu histórico contábil, você pode transferir todo o histórico para outra categoria antes de excluí-la, ou simplesmente optar por arquivá-la.
+              </p>
+            </div>
+
+            {categoriasDestinoValidas.length > 0 ? (
+              <div className="form-group">
+                <label className="form-label" htmlFor="cat-destino">
+                  Transferir histórico para qual categoria de {categoriaParaExcluir.tipo}?
+                </label>
+                <select
+                  id="cat-destino"
+                  className="form-select"
+                  value={novaCategoriaId}
+                  onChange={(e) => setNovaCategoriaId(e.target.value)}
+                  disabled={processandoReatribuicao}
+                  required
+                >
+                  {categoriasDestinoValidas.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+                <span className="form-helper">
+                  Todos os lançamentos passados e modelos recorrentes serão migrados para a categoria selecionada de forma atômica.
+                </span>
+              </div>
+            ) : (
+              <div className="alert alert-error">
+                Você não possui outra categoria de {categoriaParaExcluir.tipo} ativa para onde transferir os lançamentos. Crie uma nova categoria ou utilize o arquivamento.
+              </div>
+            )}
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  fecharModalReatribuicao();
+                  handleArquivar(categoriaParaExcluir);
+                }}
+                disabled={processandoReatribuicao}
+              >
+                📦 Apenas Arquivar
+              </button>
+              {categoriasDestinoValidas.length > 0 && (
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-danger"
+                  disabled={processandoReatribuicao || !novaCategoriaId}
+                >
+                  {processandoReatribuicao ? 'Transferindo e Excluindo...' : 'Reatribuir e Excluir'}
+                </button>
+              )}
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -52,4 +52,24 @@ Utilize o padrão abaixo para cadastrar novos incidentes:
   3. Formalização da regra de identidade visual e dimensionamento de logotipos em `docs/DESIGN.md`.
 - **Como evitar no futuro:** Sempre utilizar unidades relativas ao contexto visual (`vh`, `clamp`) para elementos de identidade visual chave e consultar a seção "Logotipo e Identidade Visual" de `docs/DESIGN.md` ao implementar novos fluxos ou telas.
 
+## 2026-09-29 - Fechamento acidental do modal ao clicar no fundo e usabilidade do campo de teto orçamentário
+
+- **Sintoma:** O modal de criação/edição de categorias era fechado inesperadamente ao clicar fora do container (no overlay de fundo), causando risco de perda de digitação; os seletores de incremento do valor variavam apenas 1 centavo; não havia prefixo visual "R$" fixo à esquerda; os centavos sumiam ao digitar números inteiros; e o ícone de etiqueta competia com o nome das categorias em tamanho reduzido.
+- **Causa:** O componente genérico `Modal` possuía um ouvinte `handleOverlayClick` que disparava `onFechar()` no clique do overlay externo; o input nativo HTML utilizava `step="0.01"` sem máscara monetária fixa de centavos; e os cards utilizavam estilos padrão com tipografia de 15px e emoji genérico de etiqueta (`🏷️`).
+- **Solução aplicada:**
+  1. Remoção do fechamento por clique no overlay no componente `Modal`, garantindo que o fechamento ocorra apenas por ação explícita no botão "Cancelar" ou no ícone "✕".
+  2. Implementação de máscara monetária contínua com duas casas decimais visíveis (`0,00`), container com prefixo visual `R$` fixo à esquerda e botões steppers dedicados (`▲` / `▼`) que incrementam e decrementam o valor exatamente de R$ 1,00 em R$ 1,00.
+  3. Substituição do ícone de etiqueta pelo ícone de moeda `🪙` envolvido em container de alto contraste harmônico nos temas claro e escuro (`.category-icon-coin`).
+  4. Ampliação do destaque tipográfico do nome da categoria (`.category-name`) para 18px (`1.125rem`), peso 700 e `letter-spacing: -0.02em`.
+- **Como evitar no futuro:** Em telas modais contendo formulários com campos de preenchimento, nunca permitir o fechamento silencioso por clique fora sem confirmação, e padronizar campos monetários com prefixo explícito `R$` e formatação contínua de centavos.
+
+## 2026-09-29 - Remoção da aura circular ao redor do ícone de moeda nas categorias
+
+- **Sintoma:** O ícone de moeda nos cards de categoria exibia uma "aura" lilás translúcida circular com borda (`.category-icon-coin`), gerando ruído visual indesejado para a identidade minimalista da tela.
+- **Causa:** Regra CSS `.category-icon-coin` definia `background`, `border` e dimensões fixas (36px x 36px) simulando uma medalha/badge circular.
+- **Solução aplicada:** Remoção das propriedades de background e borda de `.category-icon-coin` em `app/static/css/style.css`, mantendo apenas a moeda `🪙` limpa e dimensionada diretamente ao lado do nome da categoria.
+- **Como evitar no futuro:** Preservar a sobriedade dos ícones evitando invólucros coloridos não previstos estritamente no DESIGN.md Obsidian.
+
+
+
 

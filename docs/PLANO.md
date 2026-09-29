@@ -145,16 +145,16 @@ Este documento define as fases incrementais para a construção completa do sist
 
 * **Objetivo:** Implementar o gerenciamento de categorias de receita e despesa, definição de tetos de gastos mensais e o fluxo transacional de reatribuição em lote ao excluir categorias com histórico.
 * **Checklist de tarefas:**
-  - [ ] Criar `app/controllers/categorias_controller.py`:
+  - [x] Criar `app/controllers/categorias_controller.py`:
     - `GET /api/categorias` (listagem agrupada por tipo, com consumo orçamentário do mês);
     - `POST /api/categorias` (criação com validação de unicidade por usuário e tipo);
     - `PUT /api/categorias/<id>` (edição de nome e teto orçamentário opcional);
-    - `PATCH /api/categorias/<id>/arquivar`;
+    - `PATCH /api/categorias/<id>/arquivar` e `PATCH /api/categorias/<id>/reativar`;
     - `DELETE /api/categorias/<id>` (exclusão direta apenas se contagem de lançamentos for zero);
     - `POST /api/categorias/<id>/reatribuir-excluir` (transação atômica que transfere lançamentos ativos, soft-deletados e modelos recorrentes para a nova categoria antes de excluir a antiga);
-  - [ ] Construir componentes de interface React para Categorias (seções de Despesas e Receitas, barras de progresso do teto com alerta > 100% e modal de reatribuição em lote).
+  - [x] Construir componentes de interface React para Categorias (seções de Despesas e Receitas, barras de progresso do teto com alerta > 100% e modal de reatribuição em lote).
 * **Critérios de pronto:** Categorias manipuláveis, integridade referencial protegida contra violações de FK e modal de reatribuição operando atomicamente.
-* **Arquivos e pastas alterados:** `app/controllers/categorias_controller.py`, `app/static/js/`.
+* **Arquivos e pastas alterados:** `app/controllers/categorias_controller.py`, `app/controllers/__init__.py`, `app/__init__.py`, `app/static/css/style.css`, `app/static/js/app.js`, `tests/test_fase7_categorias.py`.
 * **Dependências:** Fase 5 e Fase 6 concluídas.
 
 ---

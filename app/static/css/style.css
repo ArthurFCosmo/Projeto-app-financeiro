@@ -847,3 +847,298 @@ a:hover {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Fase 7 — Módulo de Categorias & Orçamentos
+   ========================================================================== */
+
+/* Navegação por Abas (Despesas / Receitas) */
+.tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: var(--border-width) solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-count {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-active);
+  color: var(--text-primary);
+}
+
+/* Card de Categoria */
+.category-card {
+  background: var(--surface-container);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.category-card:hover {
+  border-color: var(--surface-active);
+  background: var(--surface-hover);
+}
+
+.category-card-archived {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.category-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.category-name-group {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.category-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.category-icon-coin {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.category-name {
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Badges específicas */
+.badge-expense {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-income {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--tertiary);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.badge-exceeded {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+/* Bloco de Orçamento e Barra de Progresso */
+.budget-block {
+  margin: 0.75rem 0 1rem 0;
+  padding: 0.75rem 0.875rem;
+  background: var(--surface-hover);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.budget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.budget-amounts {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.budget-meta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.budget-percent {
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-bar-fill.progress-safe {
+  background: var(--primary);
+}
+
+.progress-bar-fill.progress-warning {
+  background: #f59e0b; /* Âmbar sutil de alerta */
+}
+
+.progress-bar-fill.progress-exceeded {
+  background: var(--error);
+}
+
+/* Sem teto estipulado */
+.no-budget-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 1rem 0;
+  font-style: italic;
+}
+
+/* Caixa de aviso do modal de reatribuição */
+.modal-warning-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.modal-warning-title {
+  color: var(--error);
+  font-weight: 700;
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Select customizado estilizado para o Obsidian */
+.form-select {
+  width: 100%;
+  background: var(--surface-hover);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  padding: 0.625rem 0.875rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+}
+
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+}
+
+.form-select option {
+  background: var(--surface-container);
+  color: var(--text-primary);
+}
+
+/* Input monetário com prefixo R$ fixo e steppers de 1 real */
+.input-moeda-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-moeda-prefixo {
+  position: absolute;
+  left: 0.875rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  pointer-events: none;
+  user-select: none;
+}
+
+.input-moeda-field {
+  padding-left: 2.6rem !important;
+  padding-right: 2.75rem !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.input-moeda-steppers {
+  position: absolute;
+  right: 0.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.input-moeda-stepper-btn {
+  background: var(--surface-container);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.5625rem;
+  line-height: 1;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  padding: 0;
+}
+
+.input-moeda-stepper-btn:hover {
+  background: var(--surface-active);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+
