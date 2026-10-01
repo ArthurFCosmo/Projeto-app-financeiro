@@ -1,8 +1,8 @@
 # Estado Atual do Projeto — FinançasSimples
 
-* **Última atualização:** 2026-09-29 (Refinamento de UX da Fase 7: persistência do modal, formatação contínua de centavos, steppers de R$ 1,00, ícone de moeda limpo sem aura e tipografia destacada)
-* **Fase atual:** Fase 7 concluída — Módulo de Categorias e Orçamentos (com refinamentos de UX)
-* **Próximo passo recomendado:** Iniciar a Fase 8 (Módulo de Lançamentos)
+* **Última atualização:** 2026-10-01 (Conclusão da Fase 8: Módulo de Lançamentos com receitas, despesas, transferências, soft delete e interface React)
+* **Fase atual:** Fase 8 concluída — Módulo de Lançamentos
+* **Próximo passo recomendado:** Iniciar a Fase 9 (Módulo de Lançamentos Recorrentes)
 
 
 
@@ -19,7 +19,7 @@
 | **Fase 5** | Shell Base da Interface (Design Obsidian, CSS, Meta CSRF e Casca React) | **Concluída** |
 | **Fase 6** | Módulo de Contas e Carteiras | **Concluída** |
 | **Fase 7** | Módulo de Categorias e Orçamentos (Provisionamento Canônico e Reatribuição) | **Concluída** |
-| **Fase 8** | Módulo de Lançamentos (Receitas, Despesas, Transferências e Soft Delete) | Pendente |
+| **Fase 8** | Módulo de Lançamentos (Receitas, Despesas, Transferências e Soft Delete) | **Concluída** |
 | **Fase 9** | Módulo de Lançamentos Recorrentes (Automação de Fixos e Sincronização) | Pendente |
 | **Fase 10** | Módulo do Painel Principal (Dashboard, Gráficos e Alertas) | Pendente |
 | **Fase 11** | Módulo de Configurações, Perfil e Alternância de Tema | Pendente |
@@ -103,10 +103,11 @@
 ---
 
 ### Fase 8 — Módulo de Lançamentos
-- [ ] Implementar `app/controllers/lancamentos_controller.py` com endpoints `/api/lancamentos/*`;
-- [ ] Implementar operações de receitas, despesas e transferências entre contas;
-- [ ] Implementar exclusão lógica via soft delete (`deleted_at`) e recálculo dinâmico de saldos;
-- [ ] Construir componentes React de listagem, busca instantânea e formulário modal.
+- [x] Implementar `app/controllers/lancamentos_controller.py` com endpoints `/api/lancamentos/*` (listagem, filtros combinados, criação, transferência, edição, alternância de status e soft delete);
+- [x] Implementar operações de receitas, despesas e transferências entre contas (com validações de isolamento por `usuario_id`, preenchimento automático de vencimento/status em transferências e alerta de saldo insuficiente);
+- [x] Implementar exclusão lógica via soft delete (`deleted_at`) e recálculo dinâmico de saldos contábeis;
+- [x] Construir componentes React de listagem, navegação de período mensal, filtros rápidos, busca instantânea, badges de status e formulário modal com abas [Despesa | Receita | Transferência] e stepper de R$ 1,00;
+- [x] Criar suíte de testes unitários e de integração automatizados com 100% de aprovação (`tests/test_fase8_lancamentos.py`).
 
 ---
 
