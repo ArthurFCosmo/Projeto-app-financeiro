@@ -15,6 +15,7 @@ Conforme docs/FSD.md e docs/DESIGN.md:
 from datetime import date, timedelta
 from decimal import Decimal
 import unittest
+from sqlalchemy import extract
 
 from app import create_app
 from app.models import db, Usuario, Conta, Categoria, Lancamento, LancamentoRecorrente
@@ -397,6 +398,50 @@ class DashboardTestCase(unittest.TestCase):
         self.assertEqual(lanc_gerado.descricao, "Assinatura Mensal")
         self.assertEqual(lanc_gerado.status, "pendente")
         self.assertEqual(float(lanc_gerado.valor), 250.0)
+
+    def test_dashboard_nao_dispara_sincronizacao_retroativa_em_meses_passados(self):
+        """Valida que navegar em meses passados no painel não gera lançamentos recorrentes retroativos (Issue 5.1)."""
+        self.autenticar()
+        hoje = date.today()
+
+        # Cadastra modelo de fixo ativo
+        modelo_fixo = LancamentoRecorrente(
+            usuario_id=self.user1.id,
+            tipo="despesa",
+            valor=Decimal("99.90"),
+            descricao="Nova Assinatura Outubro",
+            categoria_id=self.cat_moradia.id,
+            conta_id=self.conta1.id,
+            forma_pagamento="PIX",
+            dia_vencimento=15,
+            ativo=True,
+        )
+        db.session.add(modelo_fixo)
+        db.session.commit()
+
+        # Determina um mês no passado (ex: 2 meses atrás)
+        mes_passado = hoje.month - 2
+        ano_passado = hoje.year
+        if mes_passado <= 0:
+            mes_passado += 12
+            ano_passado -= 1
+
+        # Acessa o dashboard do mês passado
+        res = self.client.get(f"/api/dashboard/resumo?mes={mes_passado}&ano={ano_passado}")
+        self.assertEqual(res.status_code, 200)
+
+        # Não deve ter sido gerado nenhum lançamento retroativo para o mês passado
+        lanc_retroativo = Lancamento.query.filter(
+            Lancamento.usuario_id == self.user1.id,
+            Lancamento.recorrente_id == modelo_fixo.id,
+            extract("month", Lancamento.data_competencia) == mes_passado,
+            extract("year", Lancamento.data_competencia) == ano_passado,
+        ).first()
+        self.assertIsNone(lanc_retroativo)
+
+        # Bloco de alertas do período passado não deve conter cobranças geradas indevidamente
+        alertas = res.get_json()["dados"]["alertas"]
+        self.assertEqual(alertas["total_alertas"], 0)
 
 
 if __name__ == "__main__":

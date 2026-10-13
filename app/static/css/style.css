@@ -742,6 +742,7 @@ a:hover {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  overflow-y: auto;
   animation: fade-in 0.15s ease;
 }
 
@@ -756,6 +757,9 @@ a:hover {
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 480px;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   animation: slide-up 0.2s ease;
 }
 
@@ -770,6 +774,7 @@ a:hover {
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   border-bottom: var(--border-width) solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .modal-titulo {
@@ -799,6 +804,8 @@ a:hover {
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
 }
 
 .modal-footer {
@@ -1816,6 +1823,7 @@ body.light-theme .recorrentes-kpi-value.saldo-zero {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 1.5rem;
+  align-items: start;
   margin-bottom: 1.5rem;
 }
 
@@ -1995,10 +2003,11 @@ body.light-theme .recorrentes-kpi-value.saldo-zero {
   white-space: nowrap;
 }
 
+.alerta-btn-dispensar,
 .alerta-btn-pagar {
   background: var(--surface-container);
   border: var(--border-width) solid var(--border-color);
-  color: var(--tertiary);
+  color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.35rem 0.65rem;
@@ -2009,6 +2018,12 @@ body.light-theme .recorrentes-kpi-value.saldo-zero {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+}
+
+.alerta-btn-dispensar:hover {
+  background: var(--surface-container-high);
+  color: var(--text-primary);
+  border-color: var(--primary);
 }
 
 .alerta-btn-pagar:hover {
@@ -2035,5 +2050,60 @@ body.light-theme .recorrentes-kpi-value.saldo-zero {
 .btn-novo-lancamento-destaque:hover {
   opacity: 0.9;
 }
+
+/* Checkbox Customizada — Design Obsidian / Tema Claro (Fase 10 / Issue 6) */
+.custom-checkbox-container {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.custom-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.custom-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.custom-checkbox-container:hover .custom-checkbox-box {
+  border-color: var(--primary);
+}
+
+.custom-checkbox-input:checked + .custom-checkbox-box {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.custom-checkbox-input:checked + .custom-checkbox-box::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 8px;
+  border: solid var(--primary-contrast);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+.custom-checkbox-input:focus-visible + .custom-checkbox-box {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
 
 

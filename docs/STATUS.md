@@ -1,7 +1,7 @@
 # Estado Atual do Projeto — FinançasSimples
 
-* **Última atualização:** 2026-10-06 (Conclusão da Fase 10 — Módulo do Painel Principal - Dashboard)
-* **Fase atual:** Fase 10 concluída — Módulo do Painel Principal (Dashboard)
+* **Última atualização:** 2026-10-13 (Correção de ReferenceError em mensagemSucesso do TelaDashboard e restauração completa da renderização pós-login)
+* **Fase atual:** Fase 10 concluída e calibrada — Módulo do Painel Principal (Dashboard)
 * **Próximo passo recomendado:** Iniciar a Fase 11 (Módulo de Configurações, Perfil e Alternância de Tema)
 
 ---
@@ -123,6 +123,7 @@
 - [x] Implementar `app/controllers/dashboard_controller.py` com o endpoint `GET /api/dashboard/resumo` consolidando métricas do período (Saldo Líquido, Total de Receitas, Total de Despesas, Saldo Consolidado em Contas e disparo autônomo de recorrências);
 - [x] Construir componentes React do Dashboard (`TelaDashboard`, navegação mensal livre, cards de KPIs com cores semânticas, gráfico monocromático de despesas por categoria e bloco de alertas de vencimento com ação rápida de liquidação);
 - [x] Integrar atalho rápido "+ Novo Lançamento" no cabeçalho com modal de movimentações;
+- [x] Refinar salvaguardas e UI/UX (Issues 5 e 6): guarda temporal impedindo criação de alertas retroativos ao navegar no histórico passado, remoção de emojis duplicados nos KPIs, isolamento de altura no grid de categorias (`align-items: start`), limitação de viewport no modal com scroll interno (`max-height: calc(100vh - 2rem)`), steppers elegantes com símbolos `+` e `−`, rótulos semânticos ("Data da despesa/receita/transferência", "Saída/Entrada"), checkbox customizado violeta posicionado imediatamente ao lado de "Data de vencimento", e alertas informativos com ação não financeira de "Dispensar aviso";
 - [x] Criar suíte de testes unitários e de integração automatizados com 100% de aprovação (`tests/test_fase10_dashboard.py`).
 
 ---

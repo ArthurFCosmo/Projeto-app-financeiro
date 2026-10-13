@@ -43,12 +43,14 @@ def obter_resumo_dashboard():
     if not ano or ano < 2000 or ano > 2100:
         ano = hoje.year
 
-    # 1. Sincronização transparente de lançamentos recorrentes (docs/FSD.md - Seções 6.4 e 13.4)
-    try:
-        sincronizar_recorrencias_usuario(usuario_id=usuario_id, mes=mes, ano=ano)
-    except Exception as e:
-        # Falha de sincronização não deve derrubar a visualização do painel
-        pass
+    # 1. Sincronização transparente de lançamentos recorrentes (docs/FSD.md - Seções 6.4 e 13.4 e Issue 5.1)
+    # A navegação em meses passados não deve sincronizar despesas retroativas
+    if ano > hoje.year or (ano == hoje.year and mes >= hoje.month):
+        try:
+            sincronizar_recorrencias_usuario(usuario_id=usuario_id, mes=mes, ano=ano, permitir_retroativo=False)
+        except Exception:
+            # Falha de sincronização não deve derrubar a visualização do painel
+            pass
 
     # 2. Consulta base de lançamentos do período (excluindo soft-deleted)
     query_mes = Lancamento.query.filter(

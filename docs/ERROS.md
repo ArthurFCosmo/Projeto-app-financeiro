@@ -106,3 +106,52 @@ Utilize o padrão abaixo para cadastrar novos incidentes:
 - **Causa:** O controller acessava `c.calcular_saldo()` em vez de `c.calcular_saldo_atual()` no modelo `Conta`, e tentava acessar o relacionamento direto `item.conta` em vez de `item.conta_origem` no modelo `Lancamento`.
 - **Solução aplicada:** Substituição da invocação por `c.calcular_saldo_atual()` e do relacionamento por `item.conta_origem.nome if item.conta_origem else "-"`.
 - **Como evitar no futuro:** Sempre inspecionar a definição precisa dos métodos e relacionamentos mapeados nos arquivos em `app/models/` antes de chamá-los nos controllers.
+
+## 2026-10-13 - Geração indevida de alertas retroativos ao navegar no histórico e divergências de layout/UX no Dashboard e Modal de Lançamentos (Issues 5 e 6)
+
+- **Sintoma:**
+  1. (Issue 5.1) Ao navegar para meses passados no Painel Principal, assinaturas ou despesas fixas recém-cadastradas geravam lançamentos pendentes retroativos para cada mês visitado no histórico, criando uma lista volumosa e indevida de alertas de cobrança não paga (ex: 46 pendências).
+  2. (Issue 5.2) Excesso e redundância de emojis nos cards de métricas de "Saldo Líquido do Mês" (`💰`) e "Saldo Total em Contas" (`🏛️`).
+  3. (Issue 5.3) O card de "Despesas por Categoria" esticava verticalmente de forma desnecessária, acompanhando o crescimento da lista vizinha de alertas de vencimento.
+  4. (Issue 6.1) O modal de "Novo Lançamento" ultrapassava a altura da viewport do navegador sem barra de rolagem, impedindo o clique no "X" superior e no botão "Salvar Lançamento".
+  5. (Issue 6.2) Steppers monetários do modal de lançamento exibiam botões com design desalinhado (setas ▲ e ▼ com bordas finas nativas grudadas horizontalmente).
+  6. (Issue 6.3) Rótulo genérico "Data Contábil" causava confusão de entendimento entre despesas, receitas e transferências.
+  7. (Issue 6.4) O campo "Data de Vencimento" vinha obrigatoriamente preenchido e visível mesmo quando a grande maioria das despesas vence ou é liquidada na mesma data contábil.
+  8. (Issue 6.5) Rótulos abreviados "Conta de Origem (Sai)" e "Conta de Destino (Entra)" na aba de transferência.
+- **Causa:**
+  1. Ausência de guarda temporal no disparo de sincronização transparente no `dashboard_controller.py` e parâmetro `permitir_retroativo` em `recorrentes_service.py`, fazendo o serviço processar o período histórico navegado como se fosse virada de ciclo corrente.
+  2. Inclusão de elementos visuais duplicados (`dashboard-kpi-icon`) nos cards que já continham emojis semânticos no label.
+  3. Comportamento padrão de `align-items: stretch` no grid CSS de duas colunas (`.dashboard-main-grid`).
+  4. Ausência de `max-height: calc(100vh - 2rem)` e rolagem interna (`overflow-y: auto`) em `.modal-container` e `.modal-body`.
+  5. Desalinhamento entre as classes utilizadas no JSX (`currency-input-wrapper`, `stepper-buttons-container`) e o CSS canônico do design system (`.input-moeda-wrapper` e `.dia-stepper-btn`).
+  6. Rótulos estáticos e ausência de checkbox opcional para ativar data de vencimento diferenciada.
+- **Solução aplicada:**
+  1. Adicionada guarda temporal no `dashboard_controller.py` e em `recorrentes_service.py` com `permitir_retroativo=False` para sincronizações de ciclo, garantindo que consultas a meses passados apenas leiam dados históricos sem gerar cobranças retroativas.
+  2. Removidos os elementos `dashboard-kpi-icon` dos cards de Saldo Líquido e Saldo Total em Contas no JSX.
+  3. Aplicado `align-items: start;` no `.dashboard-main-grid`, tornando a altura de cada card estritamente dependente de seu próprio conteúdo.
+  4. Configurado `.modal-container` com `max-height: calc(100vh - 2rem)`, `display: flex`, `flex-direction: column`, e rolagem interna suave no `.modal-body` (`overflow-y: auto`), mantendo o cabeçalho ("X") e rodapé ("Salvar") sempre acessíveis.
+  5. Padronizados os steppers de valor para botões com símbolos `+` e `−` usando a classe `.dia-stepper-btn`, espelhando a elegância do modal de fixos recorrentes.
+  6. Rótulo dinâmico adaptado para "Data da despesa", "Data da receita" e "Data da transferência".
+  7. Implementado checkbox customizado violeta (com check "v" interno) para "Data de vencimento", vindo desmarcado por padrão com o texto acinzentado e o seletor de data oculto. Ao marcar, o texto assume cor padrão e o seletor é exibido; ao manter desmarcado, a data de vencimento assume automaticamente a mesma data da despesa/receita.
+  8. Corrigidos os rótulos de transferência para "Conta de Origem (Saída)" e "Conta de Destino (Entrada)".
+- **Como evitar no futuro:** Sincronizações automáticas de modelos periódicos devem sempre possuir salvaguardas temporais explícitas para nunca retroagir em navegações de histórico; formulários modais com múltiplos campos empilhados devem sempre ter limites de viewport (`max-height`) com rolagem interna; e novos campos de entrada devem reutilizar classes canônicas do design system estabelecidas em módulos anteriores.
+
+## 2026-10-13 - Alertas de vencimento com ação financeira indevida e afastamento do checkbox de vencimento em relação ao rótulo
+
+- **Sintoma:**
+  1. Os cards de alerta de vencimento no Painel Principal continham um botão "✓ Pagar" que disparava liquidação real do lançamento via requisição PATCH `/api/lancamentos/<id>/pagar`. Ao clicar para remover pendências ou avisos visuais, o sistema alterava o status para pago e debitava o saldo total em contas.
+  2. No modal de "Novo Lançamento", o checkbox para habilitar data de vencimento personalizada estava alinhado à extrema direita da linha, distante do texto "Data de vencimento", reduzindo a visibilidade e o vínculo contextual da opção.
+- **Causa:**
+  1. Atribuição de responsabilidade de mutação contábil direta a um componente puramente informativo de alerta, em vez de fornecer apenas um controle de dispensação de visualização.
+  2. Uso de contêiner flexbox com `justifyContent: 'space-between'`, empurrando o checkbox para o extremo oposto do label.
+- **Solução aplicada:**
+  1. Substituição do botão "✓ Pagar" por "Dispensar aviso" (`.alerta-btn-dispensar`), desvinculando completamente os alertas de qualquer alteração financeira no saldo bancário. Ao dispensar, o alerta é ocultado visualmente na interface e mantido no registro local do navegador (`localStorage`), sem chamar endpoints de pagamento.
+  2. Substituição do alinhamento `justifyContent: 'space-between'` por `gap: '0.5rem'` no contêiner do label, posicionando o checkbox customizado violeta imediatamente após o rótulo "Data de vencimento" tanto no Dashboard quanto na Tela de Lançamentos.
+- **Como evitar no futuro:** Componentes de alerta no Dashboard devem ser estritamente informativos com ações de dispensação locais, reservando operações financeiras de baixa ou quitação de lançamentos às tabelas operacionais da tela de Lançamentos; e posicionar caixas de seleção opcionais contíguas ao seu texto quando controlarem a exibição condicional do campo subsequente.
+
+## 2026-10-13 - Tela preta no Painel Principal após login devido a ReferenceError (mensagemSucesso is not defined) em TelaDashboard
+
+- **Sintoma:** Logo após efetuar o login na aplicação, o navegador exibia uma tela completamente preta e o Painel Principal não carregava (sem requisições subsequentes ao endpoint `/api/dashboard/resumo`).
+- **Causa:** Durante a remoção da variável `quitandoId` no refatoramento anterior, a linha `const [mensagemSucesso, setMensagemSucesso] = React.useState('');` foi acidentalmente removida no diff. Ao tentar montar o componente `TelaDashboard`, a expressão JSX `{mensagemSucesso && ...}` disparava `ReferenceError: mensagemSucesso is not defined`, quebrando a renderização do React e impedindo a montagem da casca visual da aplicação.
+- **Solução aplicada:** Restaurada a declaração `const [mensagemSucesso, setMensagemSucesso] = React.useState('');` em `TelaDashboard` e validada a renderização de todos os componentes da árvore via simulação headless no Node.js.
+- **Como evitar no futuro:** Ao remover variáveis de estado que deixaram de ser usadas em refatorações pontuais, inspecionar rigorosamente o bloco circundante para garantir que estados de feedback global (`mensagemSucesso`, etc.) não sejam removidos por engano; e executar validação de integridade sintática e de escopo nos componentes frontend antes da entrega.

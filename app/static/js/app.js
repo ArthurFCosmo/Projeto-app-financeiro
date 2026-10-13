@@ -1039,7 +1039,15 @@ function TelaDashboard() {
   const [carregando, setCarregando] = React.useState(true);
   const [erro, setErro] = React.useState('');
   const [mensagemSucesso, setMensagemSucesso] = React.useState('');
-  const [quitandoId, setQuitandoId] = React.useState(null);
+  // Alertas dispensados pelo usuário (persistidos localmente)
+  const [alertasDispensados, setAlertasDispensados] = React.useState(() => {
+    try {
+      const salvo = localStorage.getItem('financas_alertas_dispensados');
+      return salvo ? new Set(JSON.parse(salvo)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  });
 
   // Estados para o Modal de Novo Lançamento Rápido no Dashboard
   const [modalAberto, setModalAberto] = React.useState(false);
@@ -1047,6 +1055,7 @@ function TelaDashboard() {
   const [formValor, setFormValor] = React.useState('0,00');
   const [formDataCompetencia, setFormDataCompetencia] = React.useState('');
   const [formDataVencimento, setFormDataVencimento] = React.useState('');
+  const [temVencimentoDiferente, setTemVencimentoDiferente] = React.useState(false);
   const [formDescricao, setFormDescricao] = React.useState('');
   const [formCategoriaId, setFormCategoriaId] = React.useState('');
   const [formContaId, setFormContaId] = React.useState('');
@@ -1140,22 +1149,16 @@ function TelaDashboard() {
     setAno(agora.getFullYear());
   };
 
-  // Quitação rápida de alerta pendente
-  const marcarComoPago = async (alerta) => {
-    setQuitandoId(alerta.id);
-    try {
-      const res = await window.api.patch(`/api/lancamentos/${alerta.id}/pagar`);
-      if (res && res.sucesso) {
-        exibirSucesso(`"${alerta.descricao}" marcada como paga com sucesso!`);
-        carregarDashboard();
-      } else {
-        setErro((res && res.erro) || 'Não foi possível atualizar o status do lançamento.');
-      }
-    } catch (err) {
-      setErro(err.message || 'Erro ao processar quitação rápida.');
-    } finally {
-      setQuitandoId(null);
-    }
+  // Dispensar aviso de vencimento (apenas visual, sem alterar dados contábeis/financeiros)
+  const dispensarAlerta = (alertaId) => {
+    setAlertasDispensados((prev) => {
+      const novo = new Set(prev);
+      novo.add(alertaId);
+      try {
+        localStorage.setItem('financas_alertas_dispensados', JSON.stringify(Array.from(novo)));
+      } catch (e) {}
+      return novo;
+    });
   };
 
   // Abertura do modal de novo lançamento
@@ -1165,6 +1168,7 @@ function TelaDashboard() {
     setFormValor('0,00');
     setFormDataCompetencia(hojeStr);
     setFormDataVencimento(hojeStr);
+    setTemVencimentoDiferente(false);
     setFormDescricao('');
     setFormFormaPagamento('PIX');
     setFormStatus('pago');
@@ -1312,7 +1316,7 @@ function TelaDashboard() {
           tipo: abaModal,
           valor: valorNumerico,
           data_competencia: formDataCompetencia,
-          data_vencimento: formDataVencimento || formDataCompetencia,
+          data_vencimento: temVencimentoDiferente ? (formDataVencimento || formDataCompetencia) : formDataCompetencia,
           descricao: formDescricao.trim(),
           categoria_id: Number(formCategoriaId),
           conta_id: Number(formContaId),
@@ -1347,9 +1351,11 @@ function TelaDashboard() {
   };
 
   const graficoCategorias = dados?.grafico_despesas_categoria || [];
-  const alertasVencidos = dados?.alertas?.vencidos || [];
-  const alertasAVencer = dados?.alertas?.a_vencer || [];
-  const totalAlertas = (dados?.alertas?.total_alertas) || 0;
+  const todosVencidos = dados?.alertas?.vencidos || [];
+  const todosAVencer = dados?.alertas?.a_vencer || [];
+  const alertasVencidos = todosVencidos.filter((a) => !alertasDispensados.has(a.id));
+  const alertasAVencer = todosAVencer.filter((a) => !alertasDispensados.has(a.id));
+  const totalAlertas = alertasVencidos.length + alertasAVencer.length;
 
   const saldoMesClasse = metricas.saldo_mes > 0 ? 'positivo' : metricas.saldo_mes < 0 ? 'negativo' : 'neutro';
 
@@ -1416,7 +1422,6 @@ function TelaDashboard() {
                 <span className="dashboard-kpi-label">
                   ⚖️ Saldo Líquido do Mês
                 </span>
-                <div className="dashboard-kpi-icon">💰</div>
               </div>
               <div className={`dashboard-kpi-value ${saldoMesClasse}`}>
                 {formatarMoeda(metricas.saldo_mes)}
@@ -1464,7 +1469,6 @@ function TelaDashboard() {
                 <span className="dashboard-kpi-label">
                   🏦 Saldo Total em Contas
                 </span>
-                <div className="dashboard-kpi-icon">🏛️</div>
               </div>
               <div className="dashboard-kpi-value neutro">
                 {formatarMoeda(metricas.saldo_total_contas)}
@@ -1573,12 +1577,11 @@ function TelaDashboard() {
                         <span className="alerta-valor">{formatarMoeda(alerta.valor)}</span>
                         <button
                           type="button"
-                          className="alerta-btn-pagar"
-                          onClick={() => marcarComoPago(alerta)}
-                          disabled={quitandoId === alerta.id}
-                          title="Marcar conta como paga agora"
+                          className="alerta-btn-dispensar"
+                          onClick={() => dispensarAlerta(alerta.id)}
+                          title="Dispensar este aviso"
                         >
-                          {quitandoId === alerta.id ? '...' : '✓ Pagar'}
+                          Dispensar aviso
                         </button>
                       </div>
                     </div>
@@ -1601,12 +1604,11 @@ function TelaDashboard() {
                         <span className="alerta-valor">{formatarMoeda(alerta.valor)}</span>
                         <button
                           type="button"
-                          className="alerta-btn-pagar"
-                          onClick={() => marcarComoPago(alerta)}
-                          disabled={quitandoId === alerta.id}
-                          title="Marcar conta como paga agora"
+                          className="alerta-btn-dispensar"
+                          onClick={() => dispensarAlerta(alerta.id)}
+                          title="Dispensar este aviso"
                         >
-                          {quitandoId === alerta.id ? '...' : '✓ Pagar'}
+                          Dispensar aviso
                         </button>
                       </div>
                     </div>
@@ -1666,37 +1668,39 @@ function TelaDashboard() {
             {/* Campo Monetário com Stepper de R$ 1,00 */}
             <div className="form-group">
               <label className="form-label" htmlFor="dash-form-valor">Valor</label>
-              <div className="currency-input-wrapper">
-                <span className="currency-prefix">R$</span>
-                <input
-                  id="dash-form-valor"
-                  type="text"
-                  inputMode="numeric"
-                  className="form-input currency-input-field"
-                  value={formValor}
-                  onChange={handleValorChange}
-                  disabled={salvando}
-                  placeholder="0,00"
-                  required
-                />
-                <div className="stepper-buttons-container">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="input-moeda-wrapper" style={{ flex: 1 }}>
+                  <span className="input-moeda-prefixo">R$</span>
+                  <input
+                    id="dash-form-valor"
+                    type="text"
+                    inputMode="numeric"
+                    className="form-input input-moeda-field"
+                    value={formValor}
+                    onChange={handleValorChange}
+                    disabled={salvando}
+                    placeholder="0,00"
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
                   <button
                     type="button"
-                    className="stepper-btn stepper-up"
+                    className="btn btn-secondary btn-sm dia-stepper-btn"
                     onClick={() => incrementarValor(1)}
                     disabled={salvando}
                     title="Aumentar R$ 1,00"
                   >
-                    ▲
+                    +
                   </button>
                   <button
                     type="button"
-                    className="stepper-btn stepper-down"
+                    className="btn btn-secondary btn-sm dia-stepper-btn"
                     onClick={() => incrementarValor(-1)}
                     disabled={salvando}
                     title="Diminuir R$ 1,00"
                   >
-                    ▼
+                    −
                   </button>
                 </div>
               </div>
@@ -1724,14 +1728,23 @@ function TelaDashboard() {
             <div className="form-row-2">
               <div className="form-group">
                 <label className="form-label" htmlFor="dash-form-comp">
-                  {abaModal === 'transferencia' ? 'Data da Transferência' : 'Data Contábil'}
+                  {abaModal === 'transferencia'
+                    ? 'Data da transferência'
+                    : abaModal === 'receita'
+                    ? 'Data da receita'
+                    : 'Data da despesa'}
                 </label>
                 <input
                   id="dash-form-comp"
                   type="date"
                   className="form-input"
                   value={formDataCompetencia}
-                  onChange={(e) => setFormDataCompetencia(e.target.value)}
+                  onChange={(e) => {
+                    setFormDataCompetencia(e.target.value);
+                    if (!temVencimentoDiferente) {
+                      setFormDataVencimento(e.target.value);
+                    }
+                  }}
                   disabled={salvando}
                   required
                 />
@@ -1739,16 +1752,48 @@ function TelaDashboard() {
 
               {abaModal !== 'transferencia' && (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="dash-form-venc">Data de Vencimento</label>
-                  <input
-                    id="dash-form-venc"
-                    type="date"
-                    className="form-input"
-                    value={formDataVencimento}
-                    onChange={(e) => setFormDataVencimento(e.target.value)}
-                    disabled={salvando}
-                    required
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                    <label
+                      className="form-label"
+                      htmlFor="dash-form-venc-toggle"
+                      style={{
+                        margin: 0,
+                        color: temVencimentoDiferente ? 'var(--text-primary)' : 'var(--text-muted)',
+                        transition: 'color var(--transition-fast)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Data de vencimento
+                    </label>
+                    <label className="custom-checkbox-container" title="Definir data de vencimento diferente">
+                      <input
+                        id="dash-form-venc-toggle"
+                        type="checkbox"
+                        className="custom-checkbox-input"
+                        checked={temVencimentoDiferente}
+                        onChange={(e) => {
+                          setTemVencimentoDiferente(e.target.checked);
+                          if (e.target.checked && !formDataVencimento) {
+                            setFormDataVencimento(formDataCompetencia);
+                          }
+                        }}
+                        disabled={salvando}
+                      />
+                      <span className="custom-checkbox-box"></span>
+                    </label>
+                  </div>
+
+                  {temVencimentoDiferente && (
+                    <input
+                      id="dash-form-venc"
+                      type="date"
+                      className="form-input"
+                      value={formDataVencimento}
+                      onChange={(e) => setFormDataVencimento(e.target.value)}
+                      disabled={salvando}
+                      required={temVencimentoDiferente}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -1798,7 +1843,7 @@ function TelaDashboard() {
               /* Seleção de Contas para Transferência */
               <div className="form-row-2">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="dash-transf-origem">Conta de Origem (Sai)</label>
+                  <label className="form-label" htmlFor="dash-transf-origem">Conta de Origem (Saída)</label>
                   <select
                     id="dash-transf-origem"
                     className="form-select"
@@ -1817,7 +1862,7 @@ function TelaDashboard() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="dash-transf-destino">Conta de Destino (Entra)</label>
+                  <label className="form-label" htmlFor="dash-transf-destino">Conta de Destino (Entrada)</label>
                   <select
                     id="dash-transf-destino"
                     className="form-select"
@@ -1951,6 +1996,7 @@ function TelaLancamentos() {
   const [formValor, setFormValor] = React.useState('0,00');
   const [formDataCompetencia, setFormDataCompetencia] = React.useState('');
   const [formDataVencimento, setFormDataVencimento] = React.useState('');
+  const [temVencimentoDiferente, setTemVencimentoDiferente] = React.useState(false);
   const [formDescricao, setFormDescricao] = React.useState('');
   const [formCategoriaId, setFormCategoriaId] = React.useState('');
   const [formContaId, setFormContaId] = React.useState('');
@@ -2097,6 +2143,7 @@ function TelaLancamentos() {
     const hojeStr = new Date().toISOString().split('T')[0];
     setFormDataCompetencia(hojeStr);
     setFormDataVencimento(hojeStr);
+    setTemVencimentoDiferente(false);
     setFormDescricao('');
     setFormObservacao('');
     setFormFormaPagamento('PIX');
@@ -2150,6 +2197,7 @@ function TelaLancamentos() {
     setFormValor(formatarValorString(lancamento.valor));
     setFormDataCompetencia(lancamento.data_competencia || '');
     setFormDataVencimento(lancamento.data_vencimento || lancamento.data_competencia || '');
+    setTemVencimentoDiferente(Boolean(lancamento.data_vencimento && lancamento.data_vencimento !== lancamento.data_competencia));
     setFormDescricao(lancamento.descricao || '');
     setFormCategoriaId(lancamento.categoria_id ? String(lancamento.categoria_id) : '');
     setFormContaId(lancamento.conta_id ? String(lancamento.conta_id) : '');
@@ -2256,7 +2304,7 @@ function TelaLancamentos() {
           tipo: abaModal,
           valor: valorNumerico,
           data_competencia: formDataCompetencia,
-          data_vencimento: formDataVencimento || formDataCompetencia,
+          data_vencimento: temVencimentoDiferente ? (formDataVencimento || formDataCompetencia) : formDataCompetencia,
           descricao: formDescricao.trim(),
           categoria_id: Number(formCategoriaId),
           conta_id: Number(formContaId),
@@ -2769,40 +2817,42 @@ function TelaLancamentos() {
             {/* Campo Monetário com Prefixo R$ e Steppers de R$ 1,00 */}
             <div className="form-group">
               <label className="form-label" htmlFor="lanc-valor">
-                Valor (R$)
+                Valor
               </label>
-              <div className="input-moeda-wrapper">
-                <span className="input-moeda-prefixo">R$</span>
-                <input
-                  id="lanc-valor"
-                  type="text"
-                  required
-                  inputMode="numeric"
-                  className="form-input input-moeda-field"
-                  placeholder="0,00"
-                  value={formValor}
-                  onChange={handleValorChange}
-                  disabled={salvando}
-                  autoFocus
-                />
-                <div className="input-moeda-steppers">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="input-moeda-wrapper" style={{ flex: 1 }}>
+                  <span className="input-moeda-prefixo">R$</span>
+                  <input
+                    id="lanc-valor"
+                    type="text"
+                    required
+                    inputMode="numeric"
+                    className="form-input input-moeda-field"
+                    placeholder="0,00"
+                    value={formValor}
+                    onChange={handleValorChange}
+                    disabled={salvando}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
                   <button
                     type="button"
-                    className="input-moeda-stepper-btn"
+                    className="btn btn-secondary btn-sm dia-stepper-btn"
                     onClick={() => ajustarValorStepper(1)}
                     disabled={salvando}
                     title="Aumentar R$ 1,00"
                   >
-                    ▲
+                    +
                   </button>
                   <button
                     type="button"
-                    className="input-moeda-stepper-btn"
+                    className="btn btn-secondary btn-sm dia-stepper-btn"
                     onClick={() => ajustarValorStepper(-1)}
                     disabled={salvando}
                     title="Diminuir R$ 1,00"
                   >
-                    ▼
+                    −
                   </button>
                 </div>
               </div>
@@ -2813,7 +2863,7 @@ function TelaLancamentos() {
               <>
                 <div className="form-group">
                   <label className="form-label" htmlFor="transf-origem">
-                    Conta de Origem (Debitar)
+                    Conta de Origem (Saída)
                   </label>
                   <select
                     id="transf-origem"
@@ -2834,7 +2884,7 @@ function TelaLancamentos() {
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="transf-destino">
-                    Conta de Destino (Creditar)
+                    Conta de Destino (Entrada)
                   </label>
                   <select
                     id="transf-destino"
@@ -2855,7 +2905,7 @@ function TelaLancamentos() {
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="transf-data">
-                    Data da Transferência
+                    Data da transferência
                   </label>
                   <input
                     id="transf-data"
@@ -2904,10 +2954,10 @@ function TelaLancamentos() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-row-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="lanc-comp">
-                      Data Competência
+                      {abaModal === 'receita' ? 'Data da receita' : 'Data da despesa'}
                     </label>
                     <input
                       id="lanc-comp"
@@ -2917,7 +2967,7 @@ function TelaLancamentos() {
                       value={formDataCompetencia}
                       onChange={(e) => {
                         setFormDataCompetencia(e.target.value);
-                        if (!formDataVencimento || formDataVencimento === formDataCompetencia) {
+                        if (!temVencimentoDiferente) {
                           setFormDataVencimento(e.target.value);
                         }
                       }}
@@ -2926,18 +2976,48 @@ function TelaLancamentos() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label" htmlFor="lanc-venc">
-                      Data Vencimento
-                    </label>
-                    <input
-                      id="lanc-venc"
-                      type="date"
-                      required
-                      className="form-input"
-                      value={formDataVencimento}
-                      onChange={(e) => setFormDataVencimento(e.target.value)}
-                      disabled={salvando}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                      <label
+                        className="form-label"
+                        htmlFor="lanc-venc-toggle"
+                        style={{
+                          margin: 0,
+                          color: temVencimentoDiferente ? 'var(--text-primary)' : 'var(--text-muted)',
+                          transition: 'color var(--transition-fast)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Data de vencimento
+                      </label>
+                      <label className="custom-checkbox-container" title="Definir data de vencimento diferente">
+                        <input
+                          id="lanc-venc-toggle"
+                          type="checkbox"
+                          className="custom-checkbox-input"
+                          checked={temVencimentoDiferente}
+                          onChange={(e) => {
+                            setTemVencimentoDiferente(e.target.checked);
+                            if (e.target.checked && !formDataVencimento) {
+                              setFormDataVencimento(formDataCompetencia);
+                            }
+                          }}
+                          disabled={salvando}
+                        />
+                        <span className="custom-checkbox-box"></span>
+                      </label>
+                    </div>
+
+                    {temVencimentoDiferente && (
+                      <input
+                        id="lanc-venc"
+                        type="date"
+                        required={temVencimentoDiferente}
+                        className="form-input"
+                        value={formDataVencimento}
+                        onChange={(e) => setFormDataVencimento(e.target.value)}
+                        disabled={salvando}
+                      />
+                    )}
                   </div>
                 </div>
 

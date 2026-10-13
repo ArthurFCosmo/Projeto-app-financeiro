@@ -54,15 +54,17 @@ def listar_lancamentos():
     mes = request.args.get("mes", type=int)
     ano = request.args.get("ano", type=int)
 
-    # Sincronização automática transparente de lançamentos recorrentes (docs/FSD.md - Seção 6.4 e 13.4)
+    # Sincronização automática transparente de lançamentos recorrentes (docs/FSD.md - Seção 6.4 e 13.4 e Issue 5.1)
     try:
         from app.services.recorrentes_service import sincronizar_recorrencias_usuario
         hoje = date.today()
         ano_sinc = ano or hoje.year
         mes_sinc = mes or hoje.month
-        sincronizar_recorrencias_usuario(usuario_id=usuario_id, ano=ano_sinc, mes=mes_sinc)
-        if (ano_sinc, mes_sinc) != (hoje.year, hoje.month):
-            sincronizar_recorrencias_usuario(usuario_id=usuario_id, ano=hoje.year, mes=hoje.month)
+        # Apenas sincroniza período solicitado se for mês atual ou futuro
+        if ano_sinc > hoje.year or (ano_sinc == hoje.year and mes_sinc >= hoje.month):
+            sincronizar_recorrencias_usuario(usuario_id=usuario_id, ano=ano_sinc, mes=mes_sinc, permitir_retroativo=False)
+        # Sincroniza sempre o mês corrente caso ainda não esteja gerado
+        sincronizar_recorrencias_usuario(usuario_id=usuario_id, ano=hoje.year, mes=hoje.month, permitir_retroativo=False)
     except Exception:
         pass  # Falha silenciosa para não travar a listagem caso ocorra instabilidade temporária
 
